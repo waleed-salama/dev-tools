@@ -100,7 +100,7 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
       body: JSON.stringify(parameters),
     };
 
-    fetch("/api/validate-cache", options)
+    fetch("/api/validate-cache-edge", options)
       .then((response) => {
         const reader = response.body?.getReader();
         if (!reader) {
