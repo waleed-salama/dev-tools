@@ -24,10 +24,6 @@ export default async function handler(
   const { url } = cacheValidationRequestBodySchema.parse(req.body);
   await visitUrl(url, res, visitedUrls, imgUrls);
 
-  setTimeout(() => {
-    console.log("Waiting for 5 seconds before starting images...");
-  }, 5000);
-
   const cacheHeader = "x-vercel-cache";
 
   const acceptHeaders = [

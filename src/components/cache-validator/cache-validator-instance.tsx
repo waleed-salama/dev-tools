@@ -145,7 +145,10 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
       <div className="bg-slate-300 p-4 text-xs dark:bg-slate-700">
         {/* Settings... */}
       </div>
-      <div className="flex max-h-96 w-full flex-col gap-1 overflow-y-scroll p-4 text-xs">
+      <div
+        key={done ? "A" : "B"}
+        className="flex max-h-96 w-full flex-col gap-1 overflow-y-scroll p-4 text-xs"
+      >
         {done && (
           <div className="text-emerald-600 dark:text-emerald-400">
             ✅ Done processing URLs
