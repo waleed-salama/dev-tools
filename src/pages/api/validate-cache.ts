@@ -19,6 +19,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CacheValidationResponseData>,
 ) {
+  res.setHeader("Content-Type", "application/x-ndjson");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Transfer-Encoding", "chunked");
+
   const visitedUrls = new Set<string>();
   const imgUrls = new Set<string>();
   const { url } = cacheValidationRequestBodySchema.parse(req.body);
