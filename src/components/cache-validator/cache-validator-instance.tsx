@@ -67,11 +67,24 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
     { level: "ERROR", active: true },
   ]);
 
+  const updatesQueue = React.useRef<CacheValidationResponseData[]>([]);
+
+  // Hook: useEffect to process the updates queue
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (updatesQueue.current.length > 0) {
+        dispatch(updatesQueue.current.shift()!);
+      }
+    }, 10);
+    return () => clearInterval(interval);
+  }, []);
+
   // Function: pushResponse
   // Description: Pushes a response to the responses reducer to update the state.
   const pushResponse = React.useCallback(
     (response: CacheValidationResponseData) => {
-      dispatch(response);
+      // dispatch(response);
+      updatesQueue.current.push(response);
     },
     [],
   );
