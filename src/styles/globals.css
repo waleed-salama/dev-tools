@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  h1 {
+    @apply text-5xl font-extrabold leading-[1.15] tracking-tighter text-slate-800 dark:text-slate-200 sm:text-[5.6rem];
+  }
+  h2 {
+    @apply text-[2.5rem] font-extrabold leading-[1.15] tracking-tighter text-slate-800 dark:text-slate-200 sm:text-[4.2rem];
+  }
+  h3 {
+    @apply text-[2rem] font-extrabold leading-[1.15] tracking-tighter text-slate-800 dark:text-slate-200 sm:text-5xl;
+  }
+  h4 {
+    @apply text-[1.7rem] font-extrabold leading-[1.15] tracking-tighter text-slate-800 dark:text-slate-200 sm:text-4xl;
+  }
+  h5 {
+    @apply text-[1.4rem] font-extrabold leading-[1.15] tracking-tighter text-slate-800 dark:text-slate-200 sm:text-3xl;
+  }
+  h6 {
+    @apply text-[1.2rem] font-extrabold leading-[1.15] tracking-tighter text-slate-800 dark:text-slate-200 sm:text-xl;
+  }
+  p {
+    @apply text-base leading-6;
+  }
+  small {
+    @apply text-xs leading-5;
+  }
+}

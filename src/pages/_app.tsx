@@ -1,19 +1,27 @@
 import { type AppType } from "next/app";
-import { Inter } from "next/font/google";
+import { Roboto_Mono as MainFont } from "next/font/google";
 
 import { api } from "~/utils/api";
 
 import "~/styles/globals.css";
+import Layout from "~/components/layout";
+import { ThemeProvider } from "~/components/theme-provider";
 
-const inter = Inter({
+const font = MainFont({
+  weight: ["400"],
   subsets: ["latin"],
-  variable: "--font-sans",
+  display: "swap",
+  variable: "--font-mono",
 });
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
-    <main className={`font-sans ${inter.variable}`}>
-      <Component {...pageProps} />
-    </main>
+    <ThemeProvider attribute="class" defaultTheme="dark">
+      <div className={`font-mono ${font.variable} antialiased`}>
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      </div>
+    </ThemeProvider>
   );
 };
 
