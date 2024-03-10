@@ -20,8 +20,7 @@ const responsesReducer = (
     (r) => r.head?.url === action.head?.url,
   );
   if (existingIndex !== -1) {
-    state[existingIndex] = action;
-    return state;
+    return state.map((item, i) => (i === existingIndex ? action : item));
   }
   return [...state, action].sort((a, b) => {
     if (a.time > b.time) {

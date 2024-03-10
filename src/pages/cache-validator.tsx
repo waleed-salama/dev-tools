@@ -23,7 +23,7 @@ const CacheValidator = () => {
   return (
     <>
       <Head>
-        <title>Cache Validator</title>
+        <title>Cache Validator | waleed.dev</title>
         <meta
           name="description"
           content="A tool to recursively validate cache of a web application. Supports pages, and images with all srcsets."
