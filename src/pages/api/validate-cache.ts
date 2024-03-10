@@ -7,6 +7,9 @@ import {
   type CacheValidationResponseData,
 } from "~/lib/api-types";
 
+// To use edge runtime on Vercel
+export const runtime = "edge";
+
 // to limit concurrency with promises
 import pLimit from "p-limit";
 const limit = pLimit(5);
