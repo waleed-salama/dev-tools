@@ -23,10 +23,10 @@ const responsesReducer = (
     return state.map((item, i) => (i === existingIndex ? action : item));
   }
   return [...state, action].sort((a, b) => {
-    if (a.time > b.time) {
+    if (a.time < b.time) {
       return -1;
     }
-    if (a.time < b.time) {
+    if (a.time > b.time) {
       return 1;
     }
     return 0;
@@ -191,20 +191,20 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
     <div className="w-full overflow-hidden rounded bg-slate-200 dark:bg-slate-600">
       <div className="bg-slate-300 p-4 text-xs dark:bg-slate-700">
         {/* Settings... */}
+        {done && (
+          <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+            ✅ Done processing URLs
+          </div>
+        )}
       </div>
       <div
         key={done ? "A" : "B"}
         className="flex max-h-96 w-full flex-col gap-1 overflow-y-scroll p-4 text-xs"
       >
-        {done && (
-          <div className="text-emerald-600 dark:text-emerald-400">
-            ✅ Done processing URLs
-          </div>
-        )}
         {responses.map((response, index) => (
           <div
             key={index}
-            className={`grid grid-cols-[20px_40px_40px_auto] ${response.level === "INFO" ? "text-sky-600 dark:text-sky-400" : ""} ${response.level === "SUCCESS" ? "text-emerald-600 dark:text-emerald-400" : ""} ${response.level === "WARNING" ? "text-amber-600 dark:text-amber-400" : ""} ${response.level === "ERROR" ? "text-red-600 dark:text-red-400" : ""}`}
+            className={`grid grid-cols-[20px_40px_40px_30px_auto] ${response.level === "INFO" ? "text-sky-600 dark:text-sky-400" : ""} ${response.level === "SUCCESS" ? "text-emerald-600 dark:text-emerald-400" : ""} ${response.level === "WARNING" ? "text-amber-600 dark:text-amber-400" : ""} ${response.level === "ERROR" ? "text-red-600 dark:text-red-400" : ""}`}
           >
             <div>
               {response.head?.status === "PENDING"
@@ -214,12 +214,16 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                   : "  "}
             </div>
             {response.type === "message" && (
-              <div className="col-span-3">{response.message}</div>
+              <div className="col-span-4">{response.message}</div>
             )}
             {response.type === "head" && (
               <>
                 <div>{response.head?.type}</div>
                 <div>{response.head?.cache}</div>
+                <div>
+                  {response.head?.responseStatus &&
+                    response.head?.responseStatus}
+                </div>
                 <div>{response.head?.url}</div>
               </>
             )}

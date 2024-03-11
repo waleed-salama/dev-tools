@@ -135,15 +135,18 @@ const visitUrl = async (
   const responseData: CacheValidationResponseData = {
     time: new Date().toISOString(),
     level:
-      cacheStatus === "HIT"
-        ? "SUCCESS"
-        : cacheStatus === "ERROR"
-          ? "ERROR"
-          : "WARNING",
+      response.status >= 400
+        ? "ERROR"
+        : cacheStatus === "HIT"
+          ? "SUCCESS"
+          : cacheStatus === "ERROR"
+            ? "ERROR"
+            : "WARNING",
     type: "head",
     head: {
       url,
       type: "PAGE",
+      responseStatus: response.status,
       status: "DONE",
       cache: cacheStatus,
     },
@@ -293,15 +296,18 @@ const validateImage = async (
   const responseData: CacheValidationResponseData = {
     time: new Date().toISOString(),
     level:
-      cacheStatus === "HIT"
-        ? "SUCCESS"
-        : cacheStatus === "ERROR"
-          ? "ERROR"
-          : "WARNING",
+      response.status >= 400
+        ? "ERROR"
+        : cacheStatus === "HIT"
+          ? "SUCCESS"
+          : cacheStatus === "ERROR"
+            ? "ERROR"
+            : "WARNING",
     type: "head",
     head: {
       url,
       type: "IMG",
+      responseStatus: response.status,
       status: "DONE",
       cache: cacheStatus,
     },

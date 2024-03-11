@@ -23,6 +23,7 @@ export const cacheValidationResponseDataSchema = z.object({
       url: z.string().url(),
       type: z.union([z.literal("PAGE"), z.literal("IMG"), z.literal("OTHER")]),
       status: z.string(),
+      responseStatus: z.number().optional(),
       cache: z.union([
         z.literal("HIT"),
         z.literal("MISS"),
