@@ -196,7 +196,7 @@ const visitUrl = async (
         const resolvedUrl = resolveUrl(url, href);
         const parsedUrl = new URL(resolvedUrl);
         if (
-          parsedUrl.hostname === urlObject.origin &&
+          parsedUrl.origin === urlObject.origin &&
           !visitedUrls.has(resolvedUrl)
         ) {
           visitedUrls.add(resolvedUrl);
