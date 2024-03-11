@@ -33,7 +33,7 @@ const CacheValidator = () => {
         <div className="bg-slate-300 py-8 dark:bg-slate-700">
           <h1 className="container text-5xl">Cache Validator</h1>
         </div>
-        <form
+        {/* <form
           className="container flex flex-col gap-4"
           onSubmit={async (e) => {
             e.preventDefault();
@@ -90,7 +90,7 @@ const CacheValidator = () => {
           <button className="rounded bg-emerald-500 p-2 text-white">
             Process
           </button>
-        </form>
+        </form> */}
         <div className="container flex flex-col gap-4">
           <CacheURLInput onSubmit={processURL} />
           {processes.map((process) => (
