@@ -7,6 +7,7 @@ import {
 
 // To use edge runtime on Vercel
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 // to limit concurrency with promises
 import pLimit from "p-limit";
@@ -17,7 +18,6 @@ const limit = pLimit(5);
 // Parameters: req: Request, res: WritableStreamDefaultWriter
 // Returns: Promise<void>
 export async function POST(req: Request) {
-  // const body = await req.json();
   const { url } = cacheValidationRequestBodySchema.parse(await req.json());
 
   const cacheHeader = "x-vercel-cache";
@@ -38,21 +38,6 @@ export async function POST(req: Request) {
       };
 
       console.log("Stream started");
-      // for (let i = 0; i < 10; i++) {
-      //   console.log("Enqueuing", i);
-      //   await new Promise((r) => setTimeout(r, 1000));
-      //   sendData({
-      //     time: new Date().toISOString(),
-      //     level: "INFO",
-      //     type: "head",
-      //     head: {
-      //       url: `https://www.google.com/${i}`,
-      //       type: "PAGE",
-      //       status: "DONE",
-      //       cache: "HIT",
-      //     },
-      //   });
-      // }
       await processUrl(url, cacheHeader, acceptHeaders, sendData);
       controller.close();
     },
@@ -79,7 +64,6 @@ const processUrl = async (
     }),
   );
 
-  // res.status(200).end();
   return;
 };
 
@@ -109,7 +93,6 @@ const visitUrl = async (
   const urlObject = new URL(url);
 
   const request = async () => {
-    // return axios.get(url);
     return fetch(url);
   };
 
@@ -122,7 +105,6 @@ const visitUrl = async (
   const response = await backOff(request, options);
 
   const cacheHeader = "x-vercel-cache";
-  // const cache = response.headers[cacheHeader] as string;
   const cache = response.headers.get(cacheHeader);
   const cacheStatus =
     cache === "HIT"
@@ -153,7 +135,6 @@ const visitUrl = async (
   };
   sendData(responseData);
 
-  // const html = response.data as string;
   const html = await response.text();
   const $ = load(html);
 
@@ -186,14 +167,6 @@ const visitUrl = async (
   const links = $("a");
   await Promise.all(
     links.map(async (index, link) => {
-      // const href = $(link).attr("href");
-      // if (href) {
-      //   const absoluteUrl = new URL(href, url).toString();
-      //   if (!visitedUrls.has(absoluteUrl)) {
-      //     visitedUrls.add(absoluteUrl);
-      //     await visitUrl(absoluteUrl, res);
-      //   }
-      // }
       const href = $(link).attr("href")?.split("#")[0];
       if (href) {
         const resolvedUrl = resolveUrl(url, href);
@@ -231,6 +204,17 @@ const validateImages = async (
   cacheHeader: string,
   sendData: (data: CacheValidationResponseData) => void,
 ) => {
+  // Log the first 10 image URLs followed by  ... then the last 10 image URLs for debugging, each on a new line
+  console.debug(
+    "\n---------------\nFound " +
+      imgUrls.length.toString() +
+      " Image URLs: \n" +
+      imgUrls.slice(0, 10).join("\n") +
+      "\n...\n" +
+      imgUrls.slice(-10).join("\n") +
+      "\n---------Validating...--------\n",
+  );
+
   const promises = imgUrls.map(async (imgUrl) => {
     await limit(validateImage, imgUrl, acceptHeader, cacheHeader, sendData);
   });
@@ -263,11 +247,6 @@ const validateImage = async (
   sendData(initialResponseData);
 
   const request = async () => {
-    // return axios.head(url, {
-    //   headers: {
-    //     Accept: acceptHeader,
-    //   },
-    // });
     return fetch(url, {
       method: "HEAD",
       headers: {
@@ -283,7 +262,6 @@ const validateImage = async (
   };
 
   const response = await backOff(request, options);
-  // const cache = response.headers[cacheHeader] as string;
   const cache = response.headers.get(cacheHeader);
   const cacheStatus =
     cache === "HIT"
