@@ -136,7 +136,7 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                     );
                     pushResponse(data);
                   } catch (error) {
-                    incompleteData += json;
+                    incompleteData += s;
                   }
                 });
               } else {
@@ -151,14 +151,25 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                 }
               }
               if (incompleteData.length > 0) {
-                try {
-                  const data = cacheValidationResponseDataSchema.parse(
-                    JSON.parse(incompleteData),
-                  );
-                  pushResponse(data);
-                  incompleteData = "";
-                } catch (error) {
-                  // still incomplete
+                const split = incompleteData.split("}{");
+                if (split.length > 1) {
+                  split.forEach((s, index) => {
+                    const json =
+                      index === 0
+                        ? `${s}}`
+                        : index === split.length - 1
+                          ? `{${s}`
+                          : `{${s}}`;
+                    try {
+                      const data = cacheValidationResponseDataSchema.parse(
+                        JSON.parse(json),
+                      );
+                      pushResponse(data);
+                      incompleteData.replace(s, "");
+                    } catch (error) {
+                      // still incomplete
+                    }
+                  });
                 }
               }
               read();
