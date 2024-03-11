@@ -118,9 +118,10 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                 return;
               }
               const decoder = new TextDecoder();
-              const text = incompleteData + decoder.decode(value);
+              const decodedValue = decoder.decode(value);
+              console.log(decodedValue);
+              const text = incompleteData + decodedValue;
               incompleteData = "";
-              console.log(text);
               // sometimes the response is two json objects together, so we need to split them. Also, sometimes a single json object is split over two parts.
               const split = text.split("}{");
               if (split.length > 1) {
