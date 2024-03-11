@@ -138,7 +138,7 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                     );
                     pushResponse(data);
                   } catch (error) {
-                    incompleteData += s;
+                    incompleteData += json;
                   }
                 });
               } else {
