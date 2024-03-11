@@ -118,7 +118,8 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                 return;
               }
               const decoder = new TextDecoder();
-              const text = decoder.decode(value);
+              const text = incompleteData + decoder.decode(value);
+              incompleteData = "";
               console.log(text);
               // sometimes the response is two json objects together, so we need to split them. Also, sometimes a single json object is split over two parts.
               const split = text.split("}{");
@@ -150,28 +151,28 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                   incompleteData += text;
                 }
               }
-              if (incompleteData.length > 0) {
-                const split = incompleteData.split("}{");
-                if (split.length > 1) {
-                  split.forEach((s, index) => {
-                    const json =
-                      index === 0
-                        ? `${s}}`
-                        : index === split.length - 1
-                          ? `{${s}`
-                          : `{${s}}`;
-                    try {
-                      const data = cacheValidationResponseDataSchema.parse(
-                        JSON.parse(json),
-                      );
-                      pushResponse(data);
-                      incompleteData.replace(s, "");
-                    } catch (error) {
-                      // still incomplete
-                    }
-                  });
-                }
-              }
+              // if (incompleteData.length > 0) {
+              //   const split = incompleteData.split("}{");
+              //   if (split.length > 1) {
+              //     split.forEach((s, index) => {
+              //       const json =
+              //         index === 0
+              //           ? `${s}}`
+              //           : index === split.length - 1
+              //             ? `{${s}`
+              //             : `{${s}}`;
+              //       try {
+              //         const data = cacheValidationResponseDataSchema.parse(
+              //           JSON.parse(json),
+              //         );
+              //         pushResponse(data);
+              //         incompleteData.replace(s, "");
+              //       } catch (error) {
+              //         // still incomplete
+              //       }
+              //     });
+              //   }
+              // }
               read();
             })
             .catch((error) => {
