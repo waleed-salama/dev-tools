@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import logo from "/public/w-logo.svg";
 
 const MainNav = () => {
   return (
@@ -11,9 +12,10 @@ const MainNav = () => {
         </Link>
         <Link
           href="https://waleed.dev"
-          className="flex items-baseline gap-2 text-sm"
+          className="flex items-baseline gap-1 text-sm"
         >
-          by <Image src="/w-logo.svg" alt="waleed.dev" width={32} height={32} />
+          {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */}
+          by <Image src={logo} alt="waleed.dev" width={32} />
         </Link>
       </div>
     </nav>
