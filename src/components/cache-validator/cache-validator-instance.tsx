@@ -197,10 +197,7 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
           </div>
         )}
       </div>
-      <div
-        key={done ? "A" : "B"}
-        className="flex max-h-96 w-full flex-col gap-1 overflow-y-scroll p-4 text-xs"
-      >
+      <div className="flex max-h-96 w-full flex-col gap-1 overflow-y-scroll p-4 text-xs">
         {responses.map((response, index) => (
           <div
             key={index}

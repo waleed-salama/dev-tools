@@ -313,3 +313,32 @@ const resolveUrl = (hostname: string, url: string) => {
   const urlObject = URL.canParse(url) ? new URL(url) : new URL(url, hostname);
   return urlObject.toString();
 };
+
+// Function: GET
+// Description: A testing handler function to test the ReadableStream API and debug streaming issues on vercel edge.
+// Parameters: req: Request, params: Record<string, object>
+// Returns: Promise<Response>
+export async function GET(req: Request, { params }: Record<string, object>) {
+  try {
+    const { i } = params! as { i: string };
+    const iterations = parseInt(i);
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        for (let i = 1; i <= iterations; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          console.log(`Iteration ${i}`);
+          controller.enqueue(encoder.encode(`Hello, world! ${i}\n`));
+        }
+
+        controller.close();
+      },
+    });
+
+    return new Response(stream);
+  } catch (e: unknown) {
+    const error = e as Error;
+    console.error(error);
+    return new Response(error.message, { status: 500 });
+  }
+}
