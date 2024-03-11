@@ -38,7 +38,18 @@ export async function POST(req: Request) {
       };
 
       console.log("Stream started");
-      await processUrl(url, cacheHeader, acceptHeaders, sendData);
+      const { visitedUrls, imgUrls } = await processUrl(
+        url,
+        cacheHeader,
+        acceptHeaders,
+        sendData,
+      );
+      sendData({
+        time: new Date().toISOString(),
+        level: "INFO",
+        type: "message",
+        message: `Done. Visited ${visitedUrls.size} pages and checked ${imgUrls.size * acceptHeaders.length} images (${imgUrls.size} images/variants x ${acceptHeaders.length} formats).`,
+      });
       controller.close();
     },
   });
@@ -64,7 +75,7 @@ const processUrl = async (
     }),
   );
 
-  return;
+  return { visitedUrls, imgUrls };
 };
 
 // Function: visitUrl
