@@ -100,6 +100,8 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
       body: JSON.stringify(parameters),
     };
 
+    let incompleteData = "";
+
     fetch("/api/validate-cache-edge", options)
       .then((response) => {
         const reader = response.body?.getReader();
@@ -118,7 +120,7 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
               const decoder = new TextDecoder();
               const text = decoder.decode(value);
               console.log(text);
-              // sometimes the response is two json objects together, so we need to split them
+              // sometimes the response is two json objects together, so we need to split them. Also, sometimes a single json object is split over two parts.
               const split = text.split("}{");
               if (split.length > 1) {
                 split.forEach((s, index) => {
@@ -128,17 +130,36 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                       : index === split.length - 1
                         ? `{${s}`
                         : `{${s}}`;
-                  const data = cacheValidationResponseDataSchema.parse(
-                    JSON.parse(json),
-                  );
-                  pushResponse(data);
+                  try {
+                    const data = cacheValidationResponseDataSchema.parse(
+                      JSON.parse(json),
+                    );
+                    pushResponse(data);
+                  } catch (error) {
+                    incompleteData += json;
+                  }
                 });
               } else {
-                const data = cacheValidationResponseDataSchema.parse(
-                  JSON.parse(text),
-                );
-                //   console.log(data);
-                pushResponse(data);
+                try {
+                  const data = cacheValidationResponseDataSchema.parse(
+                    JSON.parse(text),
+                  );
+                  //   console.log(data);
+                  pushResponse(data);
+                } catch (error) {
+                  incompleteData += text;
+                }
+              }
+              if (incompleteData.length > 0) {
+                try {
+                  const data = cacheValidationResponseDataSchema.parse(
+                    JSON.parse(incompleteData),
+                  );
+                  pushResponse(data);
+                  incompleteData = "";
+                } catch (error) {
+                  // still incomplete
+                }
               }
               read();
             })
