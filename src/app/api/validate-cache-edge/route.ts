@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 // to limit concurrency with promises
 import pLimit from "p-limit";
-const limit = pLimit(5);
+const limit = pLimit(50);
 
 // Function: handler
 // Description: The main handler function for the cache validation API.
