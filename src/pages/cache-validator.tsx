@@ -33,6 +33,64 @@ const CacheValidator = () => {
         <div className="bg-slate-300 py-8 dark:bg-slate-700">
           <h1 className="container text-5xl">Cache Validator</h1>
         </div>
+        <form
+          className="container flex flex-col gap-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            console.log("submit");
+            // send request with input value: /api/validate-cache-edge?i=4
+            fetch(
+              `/api/validate-cache-edge?i=${
+                (
+                  document.getElementById(
+                    "iterations-input",
+                  ) as HTMLInputElement
+                ).value
+              }`,
+              {
+                method: "GET",
+              },
+            )
+              .then((response) => {
+                const reader = response.body?.getReader();
+                if (!reader) {
+                  throw new Error("No reader");
+                }
+                const read = () => {
+                  reader
+                    .read()
+                    .then(({ done, value }) => {
+                      if (done) {
+                        console.info("Stream complete");
+                        return;
+                      }
+                      const decoder = new TextDecoder();
+                      const decodedValue = decoder.decode(value);
+                      console.log(decodedValue);
+                      read();
+                    })
+                    .catch((error) => {
+                      console.error(error);
+                    });
+                };
+                read();
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+          }}
+        >
+          <input
+            className="rounded p-2"
+            id="iterations-input"
+            name="i"
+            type="text"
+            placeholder="iterations"
+          />
+          <button className="rounded bg-emerald-500 p-2 text-white">
+            Process
+          </button>
+        </form>
         <div className="container flex flex-col gap-4">
           <CacheURLInput onSubmit={processURL} />
           {processes.map((process) => (
