@@ -278,7 +278,7 @@ const resolveUrl = (hostname: string, url: string) => {
 // Description: Validates a list of image URLs using a new edge worker.
 // Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, sendData: (data: CacheValidationResponseData) => void
 // Returns: Promise<void>
-export const validateImagesInWorker = async (
+const validateImagesInWorker = async (
   imgUrls: string[],
   acceptHeader: string,
   cacheHeader: string,
@@ -317,7 +317,7 @@ export const validateImagesInWorker = async (
 // Description: Validates a subset of image URLs using a new edge worker.
 // Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, sendData: (data: CacheValidationResponseData) => void
 // Returns: Promise<void>
-export const validateImagesSubsetInWorker = async (
+const validateImagesSubsetInWorker = async (
   imgUrls: string[],
   acceptHeader: string,
   cacheHeader: string,
