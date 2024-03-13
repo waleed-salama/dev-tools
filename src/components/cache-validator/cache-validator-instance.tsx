@@ -4,6 +4,7 @@ import {
   cacheValidationResponseDataSchema,
   type CacheValidationResponseData,
 } from "~/lib/api-types";
+import Spinner from "../ui/spinner";
 
 export type CacheValidatorInstanceProps = {
   url: URL;
@@ -20,7 +21,9 @@ const responsesReducer = (
     (r) => r.head?.url === action.head?.url,
   );
   if (existingIndex !== -1) {
-    return state.map((item, i) => (i === existingIndex ? action : item));
+    return state.map((item, i) =>
+      i === existingIndex ? { ...action, time: item.time } : item,
+    );
   }
   return [...state, action].sort((a, b) => {
     if (a.time < b.time) {
@@ -175,7 +178,7 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
 
     let incompleteData = "";
 
-    fetch("/api/validate-cache-edge", options)
+    fetch("/api/validate-cache", options)
       .then((response) => {
         const reader = response.body?.getReader();
         if (!reader) {
@@ -225,28 +228,6 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
                   incompleteData += text;
                 }
               }
-              // if (incompleteData.length > 0) {
-              //   const split = incompleteData.split("}{");
-              //   if (split.length > 1) {
-              //     split.forEach((s, index) => {
-              //       const json =
-              //         index === 0
-              //           ? `${s}}`
-              //           : index === split.length - 1
-              //             ? `{${s}`
-              //             : `{${s}}`;
-              //       try {
-              //         const data = cacheValidationResponseDataSchema.parse(
-              //           JSON.parse(json),
-              //         );
-              //         pushResponse(data);
-              //         incompleteData.replace(s, "");
-              //       } catch (error) {
-              //         // still incomplete
-              //       }
-              //     });
-              //   }
-              // }
               read();
             })
             .catch((error) => {
@@ -316,11 +297,13 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
             className={`grid grid-cols-[20px_40px_40px_30px_auto] ${response.level === "INFO" ? "text-sky-600 dark:text-sky-400" : ""} ${response.level === "SUCCESS" ? "text-emerald-600 dark:text-emerald-400" : ""} ${response.level === "WARNING" ? "text-amber-600 dark:text-amber-400" : ""} ${response.level === "ERROR" ? "text-red-600 dark:text-red-400" : ""}`}
           >
             <div>
-              {response.head?.status === "PENDING"
-                ? "⏳"
-                : response.head?.status === "DONE"
-                  ? "✅"
-                  : "  "}
+              {response.head?.status === "PENDING" ? (
+                <Spinner className="h-4 w-4" />
+              ) : response.head?.status === "DONE" ? (
+                "✅"
+              ) : (
+                "  "
+              )}
             </div>
             {response.type === "message" && (
               <div className="col-span-4">{response.message}</div>

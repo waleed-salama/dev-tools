@@ -39,3 +39,13 @@ export const cacheValidationResponseDataSchema = z.object({
 export type CacheValidationResponseData = z.infer<
   typeof cacheValidationResponseDataSchema
 >;
+
+export const imageSubsetValidationRequestSchema = z.object({
+  imgUrls: z.array(z.string().url()),
+  acceptHeader: z.string(),
+  cacheHeader: z.string(),
+});
+
+export type ImageSubsetValidationRequestParameters = z.infer<
+  typeof imageSubsetValidationRequestSchema
+>;

@@ -2,16 +2,16 @@ import { load } from "cheerio";
 import { backOff } from "exponential-backoff";
 import {
   cacheValidationRequestBodySchema,
+  cacheValidationResponseDataSchema,
   type CacheValidationResponseData,
+  type ImageSubsetValidationRequestParameters,
 } from "~/lib/api-types";
+import chunk from "lodash.chunk";
+import { validateImages } from "~/lib/validate-images";
 
 // To use edge runtime on Vercel
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
-
-// to limit concurrency with promises
-import pLimit from "p-limit";
-const limit = pLimit(50);
 
 // Function: handler
 // Description: The main handler function for the cache validation API.
@@ -20,6 +20,8 @@ const limit = pLimit(50);
 export async function POST(req: Request) {
   try {
     const { url } = cacheValidationRequestBodySchema.parse(await req.json());
+    const baseUrl = new URL(req.url).origin;
+    console.log(baseUrl);
 
     const cacheHeader = "x-vercel-cache";
 
@@ -44,6 +46,7 @@ export async function POST(req: Request) {
           cacheHeader,
           acceptHeaders,
           sendData,
+          baseUrl,
         );
         sendData({
           time: new Date().toISOString(),
@@ -52,6 +55,10 @@ export async function POST(req: Request) {
           message: `Done. Visited ${visitedUrls.size} pages and checked ${imgUrls.size * acceptHeaders.length} images (${imgUrls.size} images/variants x ${acceptHeaders.length} formats).`,
         });
         controller.close();
+      },
+
+      async cancel() {
+        console.log("Stream cancelled");
       },
     });
 
@@ -68,6 +75,7 @@ const processUrl = async (
   cacheHeader: string,
   acceptHeaders: string[],
   sendData: (data: CacheValidationResponseData) => void,
+  baseUrl: string,
 ) => {
   try {
     const visitedUrls = new Set<string>();
@@ -76,16 +84,35 @@ const processUrl = async (
 
     const imgUrlsArray = Array.from(imgUrls);
 
+    const processInWorker =
+      imgUrlsArray.length * acceptHeaders.length + visitedUrls.size > 800
+        ? true
+        : false;
+
     await Promise.all(
       acceptHeaders.map(async (acceptHeader) => {
-        await validateImages(imgUrlsArray, acceptHeader, cacheHeader, sendData);
+        if (processInWorker)
+          await validateImagesInWorker(
+            imgUrlsArray,
+            acceptHeader,
+            cacheHeader,
+            sendData,
+            baseUrl,
+          );
+        else
+          await validateImages(
+            imgUrlsArray,
+            acceptHeader,
+            cacheHeader,
+            sendData,
+          );
       }),
     );
 
     return { visitedUrls, imgUrls };
   } catch (e: unknown) {
     const error = e as Error;
-    console.error(error);
+    console.error("processUrl Error: ", error);
     sendData({
       time: new Date().toISOString(),
       level: "ERROR",
@@ -222,129 +249,7 @@ const visitUrl = async (
     );
   } catch (e: unknown) {
     const error = e as Error;
-    console.error(error);
-    sendData({
-      time: new Date().toISOString(),
-      level: "ERROR",
-      type: "message",
-      message: error.message,
-    });
-  }
-  return;
-};
-
-// Function: validateImages
-// Description: Validates a list of image URLs using the provided accept and cache headers.
-// Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, res: WritableStreamDefaultWriter
-// Returns: Promise<void>
-const validateImages = async (
-  imgUrls: string[],
-  acceptHeader: string,
-  cacheHeader: string,
-  sendData: (data: CacheValidationResponseData) => void,
-) => {
-  try {
-    // Log the first 10 image URLs followed by  ... then the last 10 image URLs for debugging, each on a new line
-    console.debug(
-      "\n---------------\nFound " +
-        imgUrls.length.toString() +
-        " Image URLs: \n" +
-        imgUrls.slice(0, 10).join("\n") +
-        "\n...\n" +
-        imgUrls.slice(-10).join("\n") +
-        "\n---------Validating...--------\n",
-    );
-
-    const promises = imgUrls.map(async (imgUrl) => {
-      await limit(validateImage, imgUrl, acceptHeader, cacheHeader, sendData);
-    });
-    await Promise.all(promises);
-  } catch (e: unknown) {
-    const error = e as Error;
-    console.error(error);
-    sendData({
-      time: new Date().toISOString(),
-      level: "ERROR",
-      type: "message",
-      message: error.message,
-    });
-  }
-  return;
-};
-
-// Function: validateImage
-// Description: Validates a single image URL using the provided accept and cache headers.
-// Parameters: url: string, acceptHeader: string, cacheHeader: string, res: WritableStreamDefaultWriter
-// Returns: Promise<void>
-const validateImage = async (
-  url: string,
-  acceptHeader: string,
-  cacheHeader: string,
-  sendData: (data: CacheValidationResponseData) => void,
-) => {
-  try {
-    console.log(`Validating image: ${url}`);
-    const initialResponseData: CacheValidationResponseData = {
-      time: new Date().toISOString(),
-      level: "INFO",
-      type: "head",
-      head: {
-        type: "IMG",
-        url,
-        status: "PENDING",
-        cache: "",
-      },
-    };
-    sendData(initialResponseData);
-
-    const request = async () => {
-      return fetch(url, {
-        method: "HEAD",
-        headers: {
-          Accept: acceptHeader,
-        },
-      });
-    };
-
-    const options = {
-      numOfAttempts: 3,
-      startingDelay: 1000,
-      timeMultiple: 2,
-    };
-
-    const response = await backOff(request, options);
-    const cache = response.headers.get(cacheHeader);
-    const cacheStatus =
-      cache === "HIT"
-        ? "HIT"
-        : cache === "MISS"
-          ? "MISS"
-          : cache === "STALE"
-            ? "STALE"
-            : "ERROR";
-    const responseData: CacheValidationResponseData = {
-      time: new Date().toISOString(),
-      level:
-        response.status >= 400
-          ? "ERROR"
-          : cacheStatus === "HIT"
-            ? "SUCCESS"
-            : cacheStatus === "ERROR"
-              ? "ERROR"
-              : "WARNING",
-      type: "head",
-      head: {
-        url,
-        type: "IMG",
-        responseStatus: response.status,
-        status: "DONE",
-        cache: cacheStatus,
-      },
-    };
-    sendData(responseData);
-  } catch (e: unknown) {
-    const error = e as Error;
-    console.error(error);
+    console.error("visitUrl Error: ", error);
     sendData({
       time: new Date().toISOString(),
       level: "ERROR",
@@ -369,31 +274,142 @@ const resolveUrl = (hostname: string, url: string) => {
   }
 };
 
-// Function: GET
-// Description: A testing handler function to test the ReadableStream API and debug streaming issues on vercel edge.
-// Parameters: req: Request, params: Record<string, object>
-// Returns: Promise<Response>
-// export async function GET(req: Request, { params }: Record<string, object>) {
-//   try {
-//     const { i } = params! as { i: string };
-//     const iterations = parseInt(i);
-//     const encoder = new TextEncoder();
-//     const stream = new ReadableStream({
-//       async start(controller) {
-//         for (let i = 1; i <= iterations; i++) {
-//           await new Promise((resolve) => setTimeout(resolve, 1000));
-//           console.log(`Iteration ${i}`);
-//           controller.enqueue(encoder.encode(`Hello, world! ${i}\n`));
-//         }
+// Function: validateImagesInWorker
+// Description: Validates a list of image URLs using a new edge worker.
+// Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, sendData: (data: CacheValidationResponseData) => void
+// Returns: Promise<void>
+export const validateImagesInWorker = async (
+  imgUrls: string[],
+  acceptHeader: string,
+  cacheHeader: string,
+  sendData: (data: CacheValidationResponseData) => void,
+  baseUrl: string,
+) => {
+  try {
+    const imgUrlsSubsets = chunk(imgUrls, 500);
+    await Promise.all(
+      imgUrlsSubsets.map(
+        async (subset) =>
+          await validateImagesSubsetInWorker(
+            subset,
+            acceptHeader,
+            cacheHeader,
+            sendData,
+            baseUrl,
+          ),
+      ),
+    );
+    console.log("All subsets complete");
+  } catch (e: unknown) {
+    const error = e as Error;
+    console.error("validateImagesInWorker Error: ", error);
+    sendData({
+      time: new Date().toISOString(),
+      level: "ERROR",
+      type: "message",
+      message: error.message,
+    });
+  }
+  return;
+};
 
-//         controller.close();
-//       },
-//     });
+// Function: validateImagesSubsetInWorker
+// Description: Validates a subset of image URLs using a new edge worker.
+// Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, sendData: (data: CacheValidationResponseData) => void
+// Returns: Promise<void>
+export const validateImagesSubsetInWorker = async (
+  imgUrls: string[],
+  acceptHeader: string,
+  cacheHeader: string,
+  sendData: (data: CacheValidationResponseData) => void,
+  baseUrl: string,
+) => {
+  try {
+    const workerUrl = `${baseUrl}/api/validate-images`;
+    const parameters: ImageSubsetValidationRequestParameters = {
+      imgUrls,
+      acceptHeader,
+      cacheHeader,
+    };
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(parameters),
+    };
+    let incompleteData = "";
 
-//     return new Response(stream);
-//   } catch (e: unknown) {
-//     const error = e as Error;
-//     console.error(error);
-//     return new Response(error.message, { status: 500 });
-//   }
-// }
+    await fetch(workerUrl, options).then(async (response) => {
+      const reader = response.body?.getReader();
+      if (!reader) {
+        console.error("No reader found");
+        throw new Error("No reader found");
+      }
+
+      const read = async () => {
+        await reader
+          .read()
+          .then(async ({ done, value }) => {
+            if (done) {
+              const finalValue = new TextDecoder().decode(value);
+              console.info("Subset complete", finalValue);
+              if (incompleteData) {
+                console.log("Incomplete data: ", incompleteData);
+              }
+              return;
+            }
+            const decoder = new TextDecoder();
+            const decodedValue = decoder.decode(value);
+            // console.log(decodedValue);
+            const text = incompleteData + decodedValue;
+            incompleteData = "";
+            // sometimes the response is two json objects together, so we need to split them. Also, sometimes a single json object is split over two parts.
+            const split = text.split("}{");
+            if (split.length > 1) {
+              split.forEach((s, index) => {
+                const json =
+                  index === 0
+                    ? `${s}}`
+                    : index === split.length - 1
+                      ? `{${s}`
+                      : `{${s}}`;
+                try {
+                  const data = cacheValidationResponseDataSchema.parse(
+                    JSON.parse(json),
+                  );
+                  sendData(data);
+                } catch (error) {
+                  incompleteData += json;
+                }
+              });
+            } else {
+              try {
+                const data = cacheValidationResponseDataSchema.parse(
+                  JSON.parse(text),
+                );
+                sendData(data);
+              } catch (error) {
+                incompleteData += text;
+              }
+            }
+            await read();
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      };
+      await read();
+    });
+  } catch (e: unknown) {
+    const error = e as Error;
+    console.error("validateImagesSubsetInWorker Error: ", error);
+    sendData({
+      time: new Date().toISOString(),
+      level: "ERROR",
+      type: "message",
+      message: error.message,
+    });
+  }
+  return;
+};

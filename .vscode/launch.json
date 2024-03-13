@@ -18,6 +18,10 @@
         "type": "node-terminal",
         "request": "launch",
         "command": "pnpm dev",
+        "skipFiles": [
+          "${workspaceFolder}/node_modules/**/*.js",
+          "<node_internals>/**/*.js",
+        ],
         "serverReadyAction": {
           "pattern": "- Local:.+(https?://.+)",
           "uriFormat": "%s",
