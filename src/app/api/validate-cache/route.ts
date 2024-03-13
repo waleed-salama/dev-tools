@@ -21,7 +21,6 @@ export async function POST(req: Request) {
   try {
     const { url } = cacheValidationRequestBodySchema.parse(await req.json());
     const baseUrl = new URL(req.url).origin;
-    console.log(baseUrl);
 
     const cacheHeader = "x-vercel-cache";
 
@@ -343,7 +342,6 @@ const validateImagesSubsetInWorker = async (
     await fetch(workerUrl, options).then(async (response) => {
       const reader = response.body?.getReader();
       if (!reader) {
-        console.error("No reader found");
         throw new Error("No reader found");
       }
 

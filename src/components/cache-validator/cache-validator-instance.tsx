@@ -165,80 +165,89 @@ const CacheValidatorInstance = ({ url }: CacheValidatorInstanceProps) => {
     [],
   );
 
-  // Hook: useMemo to fetch the cache validation data on mount
-  React.useMemo(() => {
-    const parameters: CacheValidationRequestBody = { url: url.href };
-    const options = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(parameters),
-    };
+  // Hook: useEffect to fetch the cache validation data on mount
+  React.useEffect(() => {
+    let active = true;
 
-    let incompleteData = "";
+    const load = async () => {
+      const parameters: CacheValidationRequestBody = { url: url.href };
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(parameters),
+      };
 
-    fetch("/api/validate-cache", options)
-      .then((response) => {
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("No reader");
-        }
-        const read = () => {
-          reader
-            .read()
-            .then(({ done, value }) => {
-              if (done) {
-                console.info("Stream complete");
-                setDone(true);
-                return;
-              }
-              const decoder = new TextDecoder();
-              const decodedValue = decoder.decode(value);
-              console.log(decodedValue);
-              const text = incompleteData + decodedValue;
-              incompleteData = "";
-              // sometimes the response is two json objects together, so we need to split them. Also, sometimes a single json object is split over two parts.
-              const split = text.split("}{");
-              if (split.length > 1) {
-                split.forEach((s, index) => {
-                  const json =
-                    index === 0
-                      ? `${s}}`
-                      : index === split.length - 1
-                        ? `{${s}`
-                        : `{${s}}`;
+      let incompleteData = "";
+
+      await fetch("/api/validate-cache", options)
+        .then(async (response) => {
+          const reader = response.body?.getReader();
+          if (!reader) {
+            throw new Error("No reader");
+          }
+          const read = async () => {
+            await reader
+              .read()
+              .then(async ({ done, value }) => {
+                if (done) {
+                  console.info("Stream complete");
+                  setDone(true);
+                  return;
+                }
+                const decoder = new TextDecoder();
+                const decodedValue = decoder.decode(value);
+                console.log(decodedValue);
+                const text = incompleteData + decodedValue;
+                incompleteData = "";
+                // sometimes the response is two json objects together, so we need to split them. Also, sometimes a single json object is split over two parts.
+                const split = text.split("}{");
+                if (split.length > 1) {
+                  split.forEach((s, index) => {
+                    const json =
+                      index === 0
+                        ? `${s}}`
+                        : index === split.length - 1
+                          ? `{${s}`
+                          : `{${s}}`;
+                    try {
+                      const data = cacheValidationResponseDataSchema.parse(
+                        JSON.parse(json),
+                      );
+                      pushResponse(data);
+                    } catch (error) {
+                      incompleteData += json;
+                    }
+                  });
+                } else {
                   try {
                     const data = cacheValidationResponseDataSchema.parse(
-                      JSON.parse(json),
+                      JSON.parse(text),
                     );
+                    //   console.log(data);
                     pushResponse(data);
                   } catch (error) {
-                    incompleteData += json;
+                    incompleteData += text;
                   }
-                });
-              } else {
-                try {
-                  const data = cacheValidationResponseDataSchema.parse(
-                    JSON.parse(text),
-                  );
-                  //   console.log(data);
-                  pushResponse(data);
-                } catch (error) {
-                  incompleteData += text;
                 }
-              }
-              read();
-            })
-            .catch((error) => {
-              console.error(error);
-            });
-        };
-        read();
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+                await read();
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+          };
+          await read();
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    };
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    if (active) load();
+    return () => {
+      active = false;
+    };
   }, [url, pushResponse]);
 
   return (
