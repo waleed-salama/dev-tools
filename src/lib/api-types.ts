@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const cacheValidationRequestBodySchema = z.object({
   url: z.string().url(),
+  formats: z.array(z.string()),
 });
 
 export type CacheValidationRequestBody = z.infer<
@@ -10,6 +11,7 @@ export type CacheValidationRequestBody = z.infer<
 
 export const cacheValidationResponseDataSchema = z.object({
   time: z.string().datetime(),
+  id: z.string(),
   level: z.union([
     z.literal("VERBOSE"),
     z.literal("INFO"),
@@ -24,6 +26,9 @@ export const cacheValidationResponseDataSchema = z.object({
       type: z.union([z.literal("PAGE"), z.literal("IMG"), z.literal("OTHER")]),
       status: z.string(),
       responseStatus: z.number().optional(),
+      contentType: z.string().nullable().optional(),
+      contentTypeMismatch: z.boolean().optional(),
+      acceptHeader: z.string().optional(),
       cache: z.union([
         z.literal("HIT"),
         z.literal("MISS"),

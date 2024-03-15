@@ -19,17 +19,21 @@ export const dynamic = "force-dynamic";
 // Returns: Promise<void>
 export async function POST(req: Request) {
   try {
-    const { url } = cacheValidationRequestBodySchema.parse(await req.json());
+    const { url, formats } = cacheValidationRequestBodySchema.parse(
+      await req.json(),
+    );
     const baseUrl = new URL(req.url).origin;
 
     const cacheHeader = "x-vercel-cache";
 
-    const acceptHeaders = [
-      "image/avif,image/webp,image/jpeg,image/png,image/*,*/*;q=0.8",
-      // "image/webp,image/jpeg,image/png,image/*,*/*;q=0.8",
-      // "image/jpeg,image/png,image/*,*/*;q=0.8",
-      // "image/png,image/*,*/*;q=0.8",
-    ];
+    // const acceptHeaders = [
+    //   "image/avif,image/webp,image/jpeg,image/png,image/*,*/*;q=0.8",
+    //   // "image/webp,image/jpeg,image/png,image/*,*/*;q=0.8",
+    //   // "image/jpeg,image/png,image/*,*/*;q=0.8",
+    //   // "image/png,image/*,*/*;q=0.8",
+    // ];
+
+    const acceptHeaders = formats.map((format) => `image/${format}`);
 
     const encoder = new TextEncoder();
 
@@ -49,6 +53,7 @@ export async function POST(req: Request) {
         );
         sendData({
           time: new Date().toISOString(),
+          id: crypto.randomUUID(),
           level: "INFO",
           type: "message",
           message: `Done. Visited ${visitedUrls.size} pages and checked ${imgUrls.size * acceptHeaders.length} images (${imgUrls.size} images/variants x ${acceptHeaders.length} formats).`,
@@ -79,6 +84,7 @@ const processUrl = async (
   try {
     const visitedUrls = new Set<string>();
     const imgUrls = new Set<string>();
+    visitedUrls.add(url);
     await visitUrl(url, sendData, visitedUrls, imgUrls);
 
     const imgUrlsArray = Array.from(imgUrls);
@@ -114,6 +120,7 @@ const processUrl = async (
     console.error("processUrl Error: ", error);
     sendData({
       time: new Date().toISOString(),
+      id: crypto.randomUUID(),
       level: "ERROR",
       type: "message",
       message: error.message,
@@ -133,8 +140,10 @@ const visitUrl = async (
   imgUrls: Set<string>,
 ) => {
   try {
+    const id = crypto.randomUUID();
     const initialResponseData: CacheValidationResponseData = {
       time: new Date().toISOString(),
+      id,
       level: "INFO",
       type: "head",
       head: {
@@ -170,8 +179,11 @@ const visitUrl = async (
           : cache === "STALE"
             ? "STALE"
             : "ERROR";
+
+    const contentType = response.headers.get("content-type");
     const responseData: CacheValidationResponseData = {
       time: new Date().toISOString(),
+      id,
       level:
         response.status >= 400
           ? "ERROR"
@@ -184,6 +196,7 @@ const visitUrl = async (
       head: {
         url,
         type: "PAGE",
+        contentType: contentType,
         responseStatus: response.status,
         status: "DONE",
         cache: cacheStatus,
@@ -251,6 +264,7 @@ const visitUrl = async (
     console.error("visitUrl Error: ", error);
     sendData({
       time: new Date().toISOString(),
+      id: crypto.randomUUID(),
       level: "ERROR",
       type: "message",
       message: error.message,
@@ -304,6 +318,7 @@ const validateImagesInWorker = async (
     console.error("validateImagesInWorker Error: ", error);
     sendData({
       time: new Date().toISOString(),
+      id: crypto.randomUUID(),
       level: "ERROR",
       type: "message",
       message: error.message,
@@ -404,6 +419,7 @@ const validateImagesSubsetInWorker = async (
     console.error("validateImagesSubsetInWorker Error: ", error);
     sendData({
       time: new Date().toISOString(),
+      id: crypto.randomUUID(),
       level: "ERROR",
       type: "message",
       message: error.message,

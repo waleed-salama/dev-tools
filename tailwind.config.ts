@@ -11,9 +11,18 @@ const config = {
   ],
   prefix: "",
   theme: {
+    screens: {
+      sm: "600px",
+      md: "900px",
+      lg: "1200px",
+      xl: "1500px",
+    },
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "0.5rem",
+        sm: "2rem",
+      },
       screens: {
         sm: "600px",
         md: "900px",

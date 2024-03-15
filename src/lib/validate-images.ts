@@ -36,6 +36,7 @@ export const validateImages = async (
     console.error("validateImages Error: ", error);
     sendData({
       time: new Date().toISOString(),
+      id: crypto.randomUUID(),
       level: "ERROR",
       type: "message",
       message: error.message,
@@ -56,8 +57,10 @@ export const validateImage = async (
 ) => {
   try {
     console.log(`Validating image: ${url}`);
+    const id = crypto.randomUUID();
     const initialResponseData: CacheValidationResponseData = {
       time: new Date().toISOString(),
+      id,
       level: "INFO",
       type: "head",
       head: {
@@ -94,8 +97,11 @@ export const validateImage = async (
           : cache === "STALE"
             ? "STALE"
             : "ERROR";
+
+    const contentType = response.headers.get("content-type");
     const responseData: CacheValidationResponseData = {
       time: new Date().toISOString(),
+      id,
       level:
         response.status >= 400
           ? "ERROR"
@@ -109,6 +115,9 @@ export const validateImage = async (
         url,
         type: "IMG",
         responseStatus: response.status,
+        contentType: contentType,
+        contentTypeMismatch: contentType !== acceptHeader,
+        acceptHeader,
         status: "DONE",
         cache: cacheStatus,
       },
@@ -119,6 +128,7 @@ export const validateImage = async (
     console.error("validateImage Error: ", error);
     sendData({
       time: new Date().toISOString(),
+      id: crypto.randomUUID(),
       level: "ERROR",
       type: "message",
       message: error.message,

@@ -17,6 +17,7 @@ export async function POST(req: Request) {
         await validateImages(imgUrls, acceptHeader, cacheHeader, sendData);
         sendData({
           time: new Date().toISOString(),
+          id: crypto.randomUUID(),
           level: "INFO",
           type: "message",
           message: "Image subset validation complete",
