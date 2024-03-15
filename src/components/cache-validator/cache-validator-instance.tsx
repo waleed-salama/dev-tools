@@ -253,7 +253,7 @@ const CacheValidatorInstance = ({
   }, [url, formats, pushResponse]);
 
   return (
-    <div className="w-full overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600">
+    <div className="2xl:w-[850px] max-2xl:w-full overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600">
       <div
         className={`flex w-full flex-col gap-4 p-2 transition-all duration-500 sm:p-4 ${done ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
       >
@@ -276,11 +276,11 @@ const CacheValidatorInstance = ({
             </div>
           </div>
           <div className="flex w-full items-center justify-center gap-2 sm:gap-4">
-            <div className="flex grow flex-col gap-2 overflow-hidden rounded bg-slate-200 pb-2  text-center dark:bg-slate-800 max-md:text-start">
+            <div className="flex grow flex-col gap-2 overflow-hidden rounded bg-slate-200 pb-2 text-center dark:bg-slate-800 max-md:text-start">
               <div className="bg-slate-400 p-2 font-bold dark:bg-slate-600 sm:px-4">
                 Pages
               </div>
-              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4">
+              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4 md:justify-center">
                 <div>
                   <strong>Found</strong> {stats.pagesFound}
                 </div>
@@ -306,7 +306,7 @@ const CacheValidatorInstance = ({
               <div className="bg-slate-400 p-2 font-bold dark:bg-slate-600 sm:px-4">
                 Images
               </div>
-              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4">
+              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4 md:justify-center">
                 <div>
                   <strong>Found</strong> {stats.imagesFound}
                 </div>

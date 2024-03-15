@@ -37,6 +37,8 @@ const CacheValidator = () => {
         </div>
         <div className="container flex flex-col items-center gap-4">
           <CacheURLInput onSubmit={processURL} />
+        </div>
+        <div className="max-2xl:container 2xl:px-8 2xl:flex-row 2xl:flex-wrap max:2xl:items-center flex flex-col justify-center gap-4">
           {processes.map((process) => (
             <CacheValidatorInstance key={process.key} {...process.props} />
           ))}
