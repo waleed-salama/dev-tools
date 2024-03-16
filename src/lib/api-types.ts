@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { type CloudProvider } from "./cloudProviders";
 
 export const cacheValidationRequestBodySchema = z.object({
   url: z.string().url(),
   formats: z.array(z.string()),
+  cloudProvider: z.custom<CloudProvider>(),
 });
 
 export type CacheValidationRequestBody = z.infer<
@@ -48,7 +50,7 @@ export type CacheValidationResponseData = z.infer<
 export const imageSubsetValidationRequestSchema = z.object({
   imgUrls: z.array(z.string().url()),
   acceptHeader: z.string(),
-  cacheHeader: z.string(),
+  cloudProvider: z.custom<CloudProvider>(),
 });
 
 export type ImageSubsetValidationRequestParameters = z.infer<

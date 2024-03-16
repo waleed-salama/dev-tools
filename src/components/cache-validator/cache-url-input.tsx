@@ -4,14 +4,35 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import { type CacheValidatorInstanceProps } from "./cache-validator-instance";
+import cloudProviders, { type CloudProvider } from "~/lib/cloudProviders";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import axios from "axios";
 
 interface CacheURLInputProps {
   onSubmit: (props: CacheValidatorInstanceProps) => void;
 }
 
+const providerReducer = (state: CloudProvider, action: string) => {
+  const provider = cloudProviders.find((provider) => provider.name === action);
+  if (provider) {
+    return provider;
+  }
+  return state;
+};
+
 const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
-  const [url, setUrl] = React.useState("");
+  const [url, setUrl] = React.useState("https://");
   const [formats, setFormats] = React.useState<string[]>(["avif", "webp"]);
+  const [cloudProvider, setCloudProvider] = React.useReducer(
+    providerReducer,
+    cloudProviders[1]!,
+  );
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     // validate the input is a valid url without any parameters or fragments or query strings
@@ -19,11 +40,64 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
     e.preventDefault();
     try {
       const validUrl: URL = new URL(url);
-      onSubmit({ url: validUrl, formats });
+      onSubmit({ url: validUrl, formats, cloudProvider });
+      setUrl("https://");
     } catch (error) {
       alert("Invalid URL");
     }
   };
+
+  React.useEffect(() => {
+    // on each change of the url, check the cloud provider and set the cache header
+    try {
+      const validUrl: URL = new URL(url);
+      // const checkCacheHeader = (url: string) => {
+      //   fetch(url, {
+      //     method: "GET",
+      //     redirect: "follow",
+      //     referrer: validUrl.origin,
+      //     cache: "no-cache",
+      //     headers: {
+      //       host: validUrl.host,
+      //       referer: validUrl.origin,
+      //       accept: "text/html",
+      //       "accept-encoding": "gzip, deflate, br",
+      //       connection: "keep-alive",
+      //     },
+      //   })
+      //     .then((response) => {
+      //       if (response.ok) {
+      //         for (const provider of cloudProviders) {
+      //           if (response.headers.has(provider.cacheHeader)) {
+      //             alert(`Cache Header: ${provider.cacheHeader}`);
+      //             setCloudProvider(provider.name);
+      //           }
+      //         }
+      //       } else if (
+      //         response.redirected &&
+      //         response.headers.has("location")
+      //       ) {
+      //         checkCacheHeader(response.headers.get("location")!);
+      //       }
+      //     })
+      //     .catch((error) => {
+      //       console.error("Error: ", error);
+      //     });
+      // };
+
+      const checkCacheHeader = async (url: string) => {
+        try {
+          const response = await fetch(`/api/check-provider?url=${url}`);
+          if (response.status === 200) {
+            const provider = await response.text();
+            setCloudProvider(provider);
+          }
+        } catch (error) {}
+      };
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      checkCacheHeader(validUrl.href);
+    } catch (error) {}
+  }, [url]);
 
   return (
     <form
@@ -46,19 +120,47 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
         />
       </div>
       <div className="flex items-center gap-2">
-        <Label className="font-bold">Image Formats</Label>
+        <Label className="text-nowrap font-bold">Image Formats</Label>
         <ToggleGroup
           type="multiple"
           variant="outline"
           aria-label="Image Formats"
           value={formats}
           onValueChange={(value) => setFormats(value)}
+          className="flex grow gap-2"
         >
-          <ToggleGroupItem value="avif">AVIF</ToggleGroupItem>
-          <ToggleGroupItem value="webp">WebP</ToggleGroupItem>
-          <ToggleGroupItem value="png">PNG</ToggleGroupItem>
-          <ToggleGroupItem value="jpeg">JPEG</ToggleGroupItem>
+          <ToggleGroupItem className="grow" value="avif">
+            AVIF
+          </ToggleGroupItem>
+          <ToggleGroupItem className="grow" value="webp">
+            WebP
+          </ToggleGroupItem>
+          <ToggleGroupItem className="grow" value="png">
+            PNG
+          </ToggleGroupItem>
+          <ToggleGroupItem className="grow" value="jpeg">
+            JPEG
+          </ToggleGroupItem>
         </ToggleGroup>
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-nowrap font-bold">Cloud Provider</Label>
+        <Select value={cloudProvider.name} onValueChange={setCloudProvider}>
+          <SelectTrigger className="grow">
+            <SelectValue placeholder="Select a provider to set cache header" />
+          </SelectTrigger>
+          <SelectContent>
+            {cloudProviders.map((provider) => (
+              <SelectItem
+                key={provider.name}
+                value={provider.name}
+                className="font-mono"
+              >
+                {provider.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <Button className="self-end" type={"submit"}>
         Start

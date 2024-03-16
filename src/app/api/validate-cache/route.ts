@@ -6,6 +6,7 @@ import {
   type CacheValidationResponseData,
   type ImageSubsetValidationRequestParameters,
 } from "~/lib/api-types";
+import { type CloudProvider } from "~/lib/cloudProviders";
 import chunk from "lodash.chunk";
 import { validateImages } from "~/lib/validate-images";
 
@@ -19,22 +20,6 @@ export const dynamic = "force-dynamic";
 // Returns: Promise<void>
 export async function POST(req: Request) {
   try {
-    const { url, formats } = cacheValidationRequestBodySchema.parse(
-      await req.json(),
-    );
-    const baseUrl = new URL(req.url).origin;
-
-    const cacheHeader = "x-vercel-cache";
-
-    // const acceptHeaders = [
-    //   "image/avif,image/webp,image/jpeg,image/png,image/*,*/*;q=0.8",
-    //   // "image/webp,image/jpeg,image/png,image/*,*/*;q=0.8",
-    //   // "image/jpeg,image/png,image/*,*/*;q=0.8",
-    //   // "image/png,image/*,*/*;q=0.8",
-    // ];
-
-    const acceptHeaders = formats.map((format) => `image/${format}`);
-
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -44,20 +29,37 @@ export async function POST(req: Request) {
         };
 
         console.log("Stream started");
-        const { visitedUrls, imgUrls } = await processUrl(
-          url,
-          cacheHeader,
-          acceptHeaders,
-          sendData,
-          baseUrl,
-        );
-        sendData({
-          time: new Date().toISOString(),
-          id: crypto.randomUUID(),
-          level: "INFO",
-          type: "message",
-          message: `Done. Visited ${visitedUrls.size} pages and checked ${imgUrls.size * acceptHeaders.length} images (${imgUrls.size} images/variants x ${acceptHeaders.length} formats).`,
-        });
+        try {
+          const { url, formats, cloudProvider } =
+            cacheValidationRequestBodySchema.parse(await req.json());
+          const baseUrl = new URL(req.url).origin;
+
+          const acceptHeaders = formats.map((format) => `image/${format}`);
+          const { visitedUrls, imgUrls } = await processUrl(
+            url,
+            cloudProvider,
+            acceptHeaders,
+            sendData,
+            baseUrl,
+          );
+          sendData({
+            time: new Date().toISOString(),
+            id: crypto.randomUUID(),
+            level: "INFO",
+            type: "message",
+            message: `Done. Visited ${visitedUrls.size} pages and checked ${imgUrls.size * acceptHeaders.length} images (${imgUrls.size} images/variants x ${acceptHeaders.length} formats).`,
+          });
+        } catch (e: unknown) {
+          const error = e as Error;
+          console.error(error);
+          sendData({
+            time: new Date().toISOString(),
+            id: crypto.randomUUID(),
+            level: "ERROR",
+            type: "message",
+            message: error.message,
+          });
+        }
         controller.close();
       },
 
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
 
 const processUrl = async (
   url: string,
-  cacheHeader: string,
+  cloudProvider: CloudProvider,
   acceptHeaders: string[],
   sendData: (data: CacheValidationResponseData) => void,
   baseUrl: string,
@@ -85,7 +87,7 @@ const processUrl = async (
     const visitedUrls = new Set<string>();
     const imgUrls = new Set<string>();
     visitedUrls.add(url);
-    await visitUrl(url, sendData, visitedUrls, imgUrls);
+    await visitUrl(url, sendData, cloudProvider, visitedUrls, imgUrls);
 
     const imgUrlsArray = Array.from(imgUrls);
 
@@ -100,7 +102,7 @@ const processUrl = async (
           await validateImagesInWorker(
             imgUrlsArray,
             acceptHeader,
-            cacheHeader,
+            cloudProvider,
             sendData,
             baseUrl,
           );
@@ -108,7 +110,7 @@ const processUrl = async (
           await validateImages(
             imgUrlsArray,
             acceptHeader,
-            cacheHeader,
+            cloudProvider,
             sendData,
           );
       }),
@@ -136,6 +138,7 @@ const processUrl = async (
 const visitUrl = async (
   url: string,
   sendData: (data: CacheValidationResponseData) => void,
+  cloudProvider: CloudProvider,
   visitedUrls: Set<string>,
   imgUrls: Set<string>,
 ) => {
@@ -169,8 +172,7 @@ const visitUrl = async (
 
     const response = await backOff(request, options);
 
-    const cacheHeader = "x-vercel-cache";
-    const cache = response.headers.get(cacheHeader);
+    const cache = response.headers.get(cloudProvider.cacheHeader);
     const cacheStatus =
       cache === "HIT"
         ? "HIT"
@@ -201,6 +203,12 @@ const visitUrl = async (
         status: "DONE",
         cache: cacheStatus,
       },
+      message:
+        response.status >= 400
+          ? response.statusText
+          : cache === null
+            ? "No cache header"
+            : "",
     };
     sendData(responseData);
 
@@ -246,7 +254,13 @@ const visitUrl = async (
           ) {
             visitedUrls.add(resolvedUrl);
             // console.log(`Visiting URL: ${resolvedUrl}\n\n`);
-            await visitUrl(resolvedUrl, sendData, visitedUrls, imgUrls);
+            await visitUrl(
+              resolvedUrl,
+              sendData,
+              cloudProvider,
+              visitedUrls,
+              imgUrls,
+            );
           } else if (parsedUrl.hostname !== urlObject.origin) {
             // console.debug(
             //   `Skipping external URL: ${resolvedUrl}. Hostname: ${parsedUrl.hostname}, Base domain: ${urlObject.origin}\n\n`,
@@ -289,12 +303,12 @@ const resolveUrl = (hostname: string, url: string) => {
 
 // Function: validateImagesInWorker
 // Description: Validates a list of image URLs using a new edge worker.
-// Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, sendData: (data: CacheValidationResponseData) => void
+// Parameters: imgUrls: string[], acceptHeader: string, cloudProvider: Provider, sendData: (data: CacheValidationResponseData) => void
 // Returns: Promise<void>
 const validateImagesInWorker = async (
   imgUrls: string[],
   acceptHeader: string,
-  cacheHeader: string,
+  cloudProvider: CloudProvider,
   sendData: (data: CacheValidationResponseData) => void,
   baseUrl: string,
 ) => {
@@ -306,7 +320,7 @@ const validateImagesInWorker = async (
           await validateImagesSubsetInWorker(
             subset,
             acceptHeader,
-            cacheHeader,
+            cloudProvider,
             sendData,
             baseUrl,
           ),
@@ -329,12 +343,12 @@ const validateImagesInWorker = async (
 
 // Function: validateImagesSubsetInWorker
 // Description: Validates a subset of image URLs using a new edge worker.
-// Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, sendData: (data: CacheValidationResponseData) => void
+// Parameters: imgUrls: string[], acceptHeader: string, cloudProvider: Provider, sendData: (data: CacheValidationResponseData) => void
 // Returns: Promise<void>
 const validateImagesSubsetInWorker = async (
   imgUrls: string[],
   acceptHeader: string,
-  cacheHeader: string,
+  cloudProvider: CloudProvider,
   sendData: (data: CacheValidationResponseData) => void,
   baseUrl: string,
 ) => {
@@ -343,7 +357,7 @@ const validateImagesSubsetInWorker = async (
     const parameters: ImageSubsetValidationRequestParameters = {
       imgUrls,
       acceptHeader,
-      cacheHeader,
+      cloudProvider,
     };
     const options = {
       method: "POST",

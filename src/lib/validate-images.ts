@@ -1,5 +1,6 @@
 import { backOff } from "exponential-backoff";
 import { type CacheValidationResponseData } from "~/lib/api-types";
+import { type CloudProvider } from "./cloudProviders";
 
 // to limit concurrency with promises
 import pLimit from "p-limit";
@@ -7,12 +8,12 @@ const limit = pLimit(50);
 
 // Function: validateImages
 // Description: Validates a list of image URLs using the provided accept and cache headers.
-// Parameters: imgUrls: string[], acceptHeader: string, cacheHeader: string, res: WritableStreamDefaultWriter
+// Parameters: imgUrls: string[], acceptHeader: string, cloudProvider: Provider, res: WritableStreamDefaultWriter
 // Returns: Promise<void>
 export const validateImages = async (
   imgUrls: string[],
   acceptHeader: string,
-  cacheHeader: string,
+  cloudProvider: CloudProvider,
   sendData: (data: CacheValidationResponseData) => void,
 ) => {
   try {
@@ -28,7 +29,7 @@ export const validateImages = async (
     );
 
     const promises = imgUrls.map(async (imgUrl) => {
-      await limit(validateImage, imgUrl, acceptHeader, cacheHeader, sendData);
+      await limit(validateImage, imgUrl, acceptHeader, cloudProvider, sendData);
     });
     await Promise.all(promises);
   } catch (e: unknown) {
@@ -47,12 +48,12 @@ export const validateImages = async (
 
 // Function: validateImage
 // Description: Validates a single image URL using the provided accept and cache headers.
-// Parameters: url: string, acceptHeader: string, cacheHeader: string, res: WritableStreamDefaultWriter
+// Parameters: url: string, acceptHeader: string, cloudProvider: Provider, res: WritableStreamDefaultWriter
 // Returns: Promise<void>
 export const validateImage = async (
   url: string,
   acceptHeader: string,
-  cacheHeader: string,
+  cloudProvider: CloudProvider,
   sendData: (data: CacheValidationResponseData) => void,
 ) => {
   try {
@@ -88,13 +89,13 @@ export const validateImage = async (
     };
 
     const response = await backOff(request, options);
-    const cache = response.headers.get(cacheHeader);
+    const cache = response.headers.get(cloudProvider.cacheHeader);
     const cacheStatus =
-      cache === "HIT"
+      cache === cloudProvider.hit
         ? "HIT"
-        : cache === "MISS"
+        : cache === cloudProvider.miss
           ? "MISS"
-          : cache === "STALE"
+          : cache === cloudProvider.stale
             ? "STALE"
             : "ERROR";
 
@@ -121,6 +122,12 @@ export const validateImage = async (
         status: "DONE",
         cache: cacheStatus,
       },
+      message:
+        response.status >= 400
+          ? response.statusText
+          : cache === null
+            ? "No Cache Header"
+            : "",
     };
     sendData(responseData);
   } catch (e: unknown) {

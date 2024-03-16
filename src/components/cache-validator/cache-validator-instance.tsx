@@ -7,10 +7,12 @@ import {
 import Spinner from "../ui/spinner";
 import { Toggle } from "~/components/ui/toggle";
 import { CheckCircle, CheckIcon } from "lucide-react";
+import { type CloudProvider } from "~/lib/cloudProviders";
 
 export type CacheValidatorInstanceProps = {
   url: URL;
   formats: string[];
+  cloudProvider: CloudProvider;
 };
 
 // Reducer: responsesReducer
@@ -62,6 +64,7 @@ const logSettingsReducer = (state: LogSettings, action: string) => {
 const CacheValidatorInstance = ({
   url,
   formats,
+  cloudProvider,
 }: CacheValidatorInstanceProps) => {
   const [responses, dispatch] = React.useReducer(responsesReducer, []);
   const [done, setDone] = React.useState(false);
@@ -117,11 +120,11 @@ const CacheValidatorInstance = ({
     ).length;
     const pagesError = responses.filter(
       (response) =>
-        response.head?.type === "PAGE" && response.head?.status === "ERROR",
+        response.head?.type === "PAGE" && response.head?.cache === "ERROR",
     ).length;
     const imagesError = responses.filter(
       (response) =>
-        response.head?.type === "IMG" && response.head?.status === "ERROR",
+        response.head?.type === "IMG" && response.head?.cache === "ERROR",
     ).length;
     return {
       pagesFound,
@@ -172,7 +175,11 @@ const CacheValidatorInstance = ({
     let active = true;
 
     const load = async () => {
-      const parameters: CacheValidationRequestBody = { url: url.href, formats };
+      const parameters: CacheValidationRequestBody = {
+        url: url.href,
+        formats,
+        cloudProvider,
+      };
       const options = {
         method: "POST",
         headers: {
@@ -250,10 +257,10 @@ const CacheValidatorInstance = ({
     return () => {
       active = false;
     };
-  }, [url, formats, pushResponse]);
+  }, [url, formats, cloudProvider, pushResponse]);
 
   return (
-    <div className="2xl:w-[850px] max-2xl:w-full overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600">
+    <div className="overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600 max-2xl:w-full 2xl:w-[850px]">
       <div
         className={`flex w-full flex-col gap-4 p-2 transition-all duration-500 sm:p-4 ${done ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
       >
@@ -391,6 +398,7 @@ const CacheValidatorInstance = ({
                   )}
                   {/* <span className="inline break-words"> */}
                   {response.head?.url}
+                  {response.message ? ` (${response.message})` : ""}
                   {/* </span> */}
                 </div>
               </>

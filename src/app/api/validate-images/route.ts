@@ -6,7 +6,7 @@ import { validateImages } from "~/lib/validate-images";
 
 export async function POST(req: Request) {
   try {
-    const { imgUrls, acceptHeader, cacheHeader } =
+    const { imgUrls, acceptHeader, cloudProvider } =
       imageSubsetValidationRequestSchema.parse(await req.json());
 
     const stream = new ReadableStream({
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         const sendData = (data: CacheValidationResponseData) => {
           controller.enqueue(new TextEncoder().encode(JSON.stringify(data)));
         };
-        await validateImages(imgUrls, acceptHeader, cacheHeader, sendData);
+        await validateImages(imgUrls, acceptHeader, cloudProvider, sendData);
         sendData({
           time: new Date().toISOString(),
           id: crypto.randomUUID(),
