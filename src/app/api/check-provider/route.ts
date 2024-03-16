@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url).searchParams.get("url");
     if (!url) {
-      return new Response("No URL provided", { status: 400 });
+      return new Response("No URL provided", { status: 200 });
     }
     const response = await fetch(url, {
       method: "HEAD",
@@ -19,11 +19,11 @@ export async function GET(req: Request) {
           return new Response(provider.name, { status: 200 });
         }
       }
-      return new Response("No cache header found", { status: 404 });
-    } else return new Response("No cache header found", { status: 404 });
+      return new Response("No cache header found", { status: 200 });
+    } else return new Response("No cache header found", { status: 200 });
   } catch (error) {
     console.error("Error: ", error);
-    return new Response("Error", { status: 500 });
+    return new Response("Error", { status: 200 });
   }
   //   return new Response("No cache header found", { status: 404 });
 }

@@ -48,11 +48,14 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
 
   React.useEffect(() => {
     // on each change of the url, check the cloud provider and set the cache header
+    const controller = new AbortController();
     try {
       const validUrl: URL = new URL(url);
       const checkCacheHeader = async (url: string) => {
         try {
-          const response = await fetch(`/api/check-provider?url=${url}`);
+          const response = await fetch(`/api/check-provider?url=${url}`, {
+            signal: controller.signal,
+          });
           if (response.status === 200) {
             const provider = await response.text();
             setCloudProvider(provider);
@@ -62,6 +65,9 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       checkCacheHeader(validUrl.href);
     } catch (error) {}
+    return () => {
+      controller.abort();
+    };
   }, [url]);
 
   return (
