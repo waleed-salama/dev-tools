@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+const providerNames = ["Vercel", "Cloudflare"] as const;
+
 export const cloudProviderSchema = z.object({
-  name: z.union([z.literal("Vercel"), z.literal("Cloudflare")]),
+  name: z.enum(providerNames),
   cacheHeader: z.string(),
   hit: z.string(),
   miss: z.string(),

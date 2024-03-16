@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import axios from "axios";
 
 interface CacheURLInputProps {
   onSubmit: (props: CacheValidatorInstanceProps) => void;
@@ -51,40 +50,6 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
     // on each change of the url, check the cloud provider and set the cache header
     try {
       const validUrl: URL = new URL(url);
-      // const checkCacheHeader = (url: string) => {
-      //   fetch(url, {
-      //     method: "GET",
-      //     redirect: "follow",
-      //     referrer: validUrl.origin,
-      //     cache: "no-cache",
-      //     headers: {
-      //       host: validUrl.host,
-      //       referer: validUrl.origin,
-      //       accept: "text/html",
-      //       "accept-encoding": "gzip, deflate, br",
-      //       connection: "keep-alive",
-      //     },
-      //   })
-      //     .then((response) => {
-      //       if (response.ok) {
-      //         for (const provider of cloudProviders) {
-      //           if (response.headers.has(provider.cacheHeader)) {
-      //             alert(`Cache Header: ${provider.cacheHeader}`);
-      //             setCloudProvider(provider.name);
-      //           }
-      //         }
-      //       } else if (
-      //         response.redirected &&
-      //         response.headers.has("location")
-      //       ) {
-      //         checkCacheHeader(response.headers.get("location")!);
-      //       }
-      //     })
-      //     .catch((error) => {
-      //       console.error("Error: ", error);
-      //     });
-      // };
-
       const checkCacheHeader = async (url: string) => {
         try {
           const response = await fetch(`/api/check-provider?url=${url}`);

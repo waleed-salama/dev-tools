@@ -10,19 +10,8 @@ export async function GET(req: Request) {
     if (!url) {
       return new Response("No URL provided", { status: 400 });
     }
-    const validUrl = new URL(url);
     const response = await fetch(url, {
-      method: "GET",
-      redirect: "follow",
-      referrer: validUrl.origin,
-      cache: "no-cache",
-      headers: {
-        host: validUrl.host,
-        referer: validUrl.origin,
-        accept: "text/html",
-        "accept-encoding": "gzip, deflate, br",
-        connection: "keep-alive",
-      },
+      method: "HEAD",
     });
     if (response.ok) {
       for (const provider of cloudProviders) {
