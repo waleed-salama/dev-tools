@@ -6,15 +6,25 @@ import { validateImages } from "~/lib/validate-images";
 
 export async function POST(req: Request) {
   try {
-    const { imgUrls, acceptHeader, cloudProvider } =
-      imageSubsetValidationRequestSchema.parse(await req.json());
+    const {
+      imgUrls,
+      acceptHeader,
+      preferredProvider: cloudProvider,
+    } = imageSubsetValidationRequestSchema.parse(await req.json());
 
+    let streamOpen = true;
     const stream = new ReadableStream({
       async start(controller) {
         const sendData = (data: CacheValidationResponseData) => {
           controller.enqueue(new TextEncoder().encode(JSON.stringify(data)));
         };
-        await validateImages(imgUrls, acceptHeader, cloudProvider, sendData);
+        await validateImages(
+          imgUrls,
+          acceptHeader,
+          cloudProvider,
+          sendData,
+          streamOpen,
+        );
         sendData({
           time: new Date().toISOString(),
           id: crypto.randomUUID(),
@@ -27,6 +37,7 @@ export async function POST(req: Request) {
 
       async cancel() {
         console.log("Stream canceled");
+        streamOpen = false;
       },
     });
 

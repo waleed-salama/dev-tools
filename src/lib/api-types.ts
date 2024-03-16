@@ -4,7 +4,7 @@ import { type CloudProvider } from "./cloudProviders";
 export const cacheValidationRequestBodySchema = z.object({
   url: z.string().url(),
   formats: z.array(z.string()),
-  cloudProvider: z.custom<CloudProvider>(),
+  preferredProvider: z.custom<CloudProvider>().nullable(),
 });
 
 export type CacheValidationRequestBody = z.infer<
@@ -29,15 +29,16 @@ export const cacheValidationResponseDataSchema = z.object({
       status: z.string(),
       responseStatus: z.number().optional(),
       contentType: z.string().nullable().optional(),
-      contentTypeMismatch: z.boolean().optional(),
       acceptHeader: z.string().optional(),
-      cache: z.union([
-        z.literal("HIT"),
-        z.literal("MISS"),
-        z.literal("STALE"),
+      cloudProviderName: z.string().optional().nullable(),
+      cacheResult: z.union([
+        z.literal("CACHED"),
+        z.literal("UNCACHED"),
+        z.literal("OTHER"),
         z.literal(""),
         z.literal("ERROR"),
       ]),
+      cacheStatus: z.string().nullable().optional(),
     })
     .optional(),
   message: z.string().optional(),
@@ -50,7 +51,7 @@ export type CacheValidationResponseData = z.infer<
 export const imageSubsetValidationRequestSchema = z.object({
   imgUrls: z.array(z.string().url()),
   acceptHeader: z.string(),
-  cloudProvider: z.custom<CloudProvider>(),
+  preferredProvider: z.custom<CloudProvider>().nullable(),
 });
 
 export type ImageSubsetValidationRequestParameters = z.infer<

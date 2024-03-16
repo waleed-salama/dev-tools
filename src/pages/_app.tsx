@@ -13,14 +13,16 @@ const font = MainFont({
   display: "swap",
   variable: "--font-mono",
 });
+
+if (typeof document !== "undefined")
+  document.body.classList.add("font-mono", font.variable, "antialiased");
+
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark">
-      <div className={`font-mono ${font.variable} antialiased`}>
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
-      </div>
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
     </ThemeProvider>
   );
 };

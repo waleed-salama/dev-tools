@@ -8,7 +8,9 @@ import cloudProviders, { type CloudProvider } from "~/lib/cloudProviders";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
@@ -17,7 +19,7 @@ interface CacheURLInputProps {
   onSubmit: (props: CacheValidatorInstanceProps) => void;
 }
 
-const providerReducer = (state: CloudProvider, action: string) => {
+const providerReducer = (state: CloudProvider | null, action: string) => {
   const provider = cloudProviders.find((provider) => provider.name === action);
   if (provider) {
     return provider;
@@ -28,9 +30,9 @@ const providerReducer = (state: CloudProvider, action: string) => {
 const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
   const [url, setUrl] = React.useState("https://");
   const [formats, setFormats] = React.useState<string[]>(["avif", "webp"]);
-  const [cloudProvider, setCloudProvider] = React.useReducer(
+  const [preferredProvider, setPreferredProvider] = React.useReducer(
     providerReducer,
-    cloudProviders[1]!,
+    null,
   );
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -39,7 +41,11 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
     e.preventDefault();
     try {
       const validUrl: URL = new URL(url);
-      onSubmit({ url: validUrl, formats, cloudProvider });
+      onSubmit({
+        url: validUrl,
+        formats,
+        preferredProvider: preferredProvider,
+      });
       setUrl("https://");
     } catch (error) {
       alert("Invalid URL");
@@ -58,7 +64,7 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
           });
           if (response.status === 200) {
             const provider = await response.text();
-            setCloudProvider(provider);
+            setPreferredProvider(provider);
           }
         } catch (error) {}
       };
@@ -72,7 +78,7 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
 
   return (
     <form
-      className="flex flex-col gap-4 rounded bg-slate-300 p-2 dark:bg-slate-700 sm:p-4"
+      className="flex flex-col gap-4 rounded bg-slate-300 p-2 dark:bg-slate-700 max-sm:w-full sm:p-4"
       onSubmit={submit}
     >
       <div className="flex items-center gap-2">
@@ -83,14 +89,14 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
           id="url-input"
           type="url"
           placeholder="https://waleed.dev"
-          className="md:w-96"
+          className="grow"
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
           }}
         />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex gap-2 max-sm:flex-col sm:items-center">
         <Label className="text-nowrap font-bold">Image Formats</Label>
         <ToggleGroup
           type="multiple"
@@ -114,22 +120,32 @@ const CacheURLInput = ({ onSubmit }: CacheURLInputProps) => {
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex gap-2 max-sm:flex-col sm:items-center">
         <Label className="text-nowrap font-bold">Cloud Provider</Label>
-        <Select value={cloudProvider.name} onValueChange={setCloudProvider}>
-          <SelectTrigger className="grow">
-            <SelectValue placeholder="Select a provider to set cache header" />
+        <Select
+          value={preferredProvider?.name}
+          onValueChange={setPreferredProvider}
+        >
+          <SelectTrigger className="sm:w-96">
+            <SelectValue placeholder="Select your cloud provider" />
           </SelectTrigger>
           <SelectContent>
-            {cloudProviders.map((provider) => (
-              <SelectItem
-                key={provider.name}
-                value={provider.name}
-                className="font-mono"
-              >
-                {provider.name}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel className="max-w-full">
+                The selected cloud provider&apos;s cache
+                <br />
+                headers will always be checked first.
+              </SelectLabel>
+              {cloudProviders.map((provider) => (
+                <SelectItem
+                  key={provider.name}
+                  value={provider.name}
+                  className="font-mono"
+                >
+                  {provider.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>
