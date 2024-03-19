@@ -267,7 +267,7 @@ const CacheValidatorInstance = ({
   }, [url, formats, preferredProvider, pushResponse]);
 
   return (
-    <div className="overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600 max-2xl:w-full 2xl:w-[850px]">
+    <div className="overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600 max-2xl:w-full 2xl:w-[1000px]">
       <div
         className={`flex w-full flex-col gap-4 p-2 transition-all duration-500 sm:p-4 ${done ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
       >
@@ -370,7 +370,7 @@ const CacheValidatorInstance = ({
         {filteredResponses.map((response, index) => (
           <div
             key={index}
-            className={`grid w-full grid-cols-[20px_40px_70px_30px_calc(100%_-_130px)] ${response.level === "INFO" ? "text-sky-600 dark:text-sky-400" : ""} ${response.level === "SUCCESS" ? "text-emerald-600 dark:text-emerald-400" : ""} ${response.level === "WARNING" ? "text-amber-600 dark:text-amber-400" : ""} ${response.level === "ERROR" ? "text-red-600 dark:text-red-400" : ""}`}
+            className={`grid w-full grid-cols-[20px_40px_70px_30px_calc(100%_-_160px)] ${response.level === "INFO" ? "text-sky-600 dark:text-sky-400" : ""} ${response.level === "SUCCESS" ? "text-emerald-600 dark:text-emerald-400" : ""} ${response.level === "WARNING" ? "text-amber-600 dark:text-amber-400" : ""} ${response.level === "ERROR" ? "text-red-600 dark:text-red-400" : ""}`}
           >
             <div>
               {response.head?.status === "PENDING" ? (

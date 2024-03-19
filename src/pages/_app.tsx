@@ -14,16 +14,19 @@ const font = MainFont({
   variable: "--font-mono",
 });
 
+// Add the font to the body element for consistent typography in elements rendering in a portal
 if (typeof document !== "undefined")
   document.body.classList.add("font-mono", font.variable, "antialiased");
 
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark">
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
-    </ThemeProvider>
+    <div className={`font-mono antialiased ${font.variable}`}>
+      <ThemeProvider attribute="class" defaultTheme="dark">
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      </ThemeProvider>
+    </div>
   );
 };
 
