@@ -7,10 +7,12 @@ import {
 import Spinner from "../ui/spinner";
 import { Toggle } from "~/components/ui/toggle";
 import { CheckCircle, CheckIcon } from "lucide-react";
+import { type CloudProvider } from "~/lib/cloudProviders";
 
 export type CacheValidatorInstanceProps = {
   url: URL;
   formats: string[];
+  preferredProvider: CloudProvider | null;
 };
 
 // Reducer: responsesReducer
@@ -62,6 +64,7 @@ const logSettingsReducer = (state: LogSettings, action: string) => {
 const CacheValidatorInstance = ({
   url,
   formats,
+  preferredProvider,
 }: CacheValidatorInstanceProps) => {
   const [responses, dispatch] = React.useReducer(responsesReducer, []);
   const [done, setDone] = React.useState(false);
@@ -91,49 +94,55 @@ const CacheValidatorInstance = ({
       (response) =>
         response.head?.type === "IMG" && response.head?.status === "DONE",
     ).length;
-    const pagesHit = responses.filter(
+    const pagesCached = responses.filter(
       (response) =>
-        response.head?.type === "PAGE" && response.head?.cache === "HIT",
+        response.head?.type === "PAGE" &&
+        response.head?.cacheResult === "CACHED",
     ).length;
-    const imagesHit = responses.filter(
+    const imagesCached = responses.filter(
       (response) =>
-        response.head?.type === "IMG" && response.head?.cache === "HIT",
+        response.head?.type === "IMG" &&
+        response.head?.cacheResult === "CACHED",
     ).length;
-    const pagesMiss = responses.filter(
+    const pagesUncached = responses.filter(
       (response) =>
-        response.head?.type === "PAGE" && response.head?.cache === "MISS",
+        response.head?.type === "PAGE" &&
+        response.head?.cacheResult === "UNCACHED",
     ).length;
-    const imagesMiss = responses.filter(
+    const imagesUncached = responses.filter(
       (response) =>
-        response.head?.type === "IMG" && response.head?.cache === "MISS",
+        response.head?.type === "IMG" &&
+        response.head?.cacheResult === "UNCACHED",
     ).length;
-    const pagesStale = responses.filter(
+    const pagesOther = responses.filter(
       (response) =>
-        response.head?.type === "PAGE" && response.head?.cache === "STALE",
+        response.head?.type === "PAGE" &&
+        response.head?.cacheResult === "OTHER",
     ).length;
-    const imagesStale = responses.filter(
+    const imagesOther = responses.filter(
       (response) =>
-        response.head?.type === "IMG" && response.head?.cache === "STALE",
+        response.head?.type === "IMG" && response.head?.cacheResult === "OTHER",
     ).length;
     const pagesError = responses.filter(
       (response) =>
-        response.head?.type === "PAGE" && response.head?.status === "ERROR",
+        response.head?.type === "PAGE" &&
+        response.head?.cacheResult === "ERROR",
     ).length;
     const imagesError = responses.filter(
       (response) =>
-        response.head?.type === "IMG" && response.head?.status === "ERROR",
+        response.head?.type === "IMG" && response.head?.cacheResult === "ERROR",
     ).length;
     return {
       pagesFound,
       imagesFound,
       pagesVisited,
       imagesVisited,
-      pagesHit,
-      imagesHit,
-      pagesMiss,
-      imagesMiss,
-      pagesStale,
-      imagesStale,
+      pagesCached,
+      imagesCached,
+      pagesUncached,
+      imagesUncached,
+      pagesOther,
+      imagesOther,
       pagesError,
       imagesError,
     };
@@ -169,12 +178,17 @@ const CacheValidatorInstance = ({
 
   // Hook: useEffect to fetch the cache validation data on mount
   React.useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
 
     const load = async () => {
-      const parameters: CacheValidationRequestBody = { url: url.href, formats };
+      const parameters: CacheValidationRequestBody = {
+        url: url.href,
+        formats,
+        preferredProvider: preferredProvider,
+      };
       const options = {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
         },
@@ -246,14 +260,14 @@ const CacheValidatorInstance = ({
         });
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    if (active) load();
+    load();
     return () => {
-      active = false;
+      controller.abort();
     };
-  }, [url, formats, pushResponse]);
+  }, [url, formats, preferredProvider, pushResponse]);
 
   return (
-    <div className="w-full overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600">
+    <div className="overflow-hidden rounded bg-slate-200 text-xs dark:bg-slate-600 max-2xl:w-full 2xl:w-[1000px]">
       <div
         className={`flex w-full flex-col gap-4 p-2 transition-all duration-500 sm:p-4 ${done ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
       >
@@ -276,11 +290,11 @@ const CacheValidatorInstance = ({
             </div>
           </div>
           <div className="flex w-full items-center justify-center gap-2 sm:gap-4">
-            <div className="flex grow flex-col gap-2 overflow-hidden rounded bg-slate-200 pb-2  text-center dark:bg-slate-800 max-md:text-start">
+            <div className="flex grow flex-col gap-2 overflow-hidden rounded bg-slate-200 pb-2 text-center dark:bg-slate-800 max-md:text-start">
               <div className="bg-slate-400 p-2 font-bold dark:bg-slate-600 sm:px-4">
                 Pages
               </div>
-              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4">
+              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4 md:justify-center">
                 <div>
                   <strong>Found</strong> {stats.pagesFound}
                 </div>
@@ -289,16 +303,16 @@ const CacheValidatorInstance = ({
                 </div>
                 <div />
                 <div>
-                  <strong>HIT</strong> {stats.pagesHit}
+                  <strong>Cached</strong> {stats.pagesCached}
                 </div>
                 <div>
-                  <strong>MISS</strong> {stats.pagesMiss}
+                  <strong>Uncached</strong> {stats.pagesUncached}
                 </div>
                 <div>
-                  <strong>STALE</strong> {stats.pagesStale}
+                  <strong>Other</strong> {stats.pagesOther}
                 </div>
                 <div>
-                  <strong>ERROR</strong> {stats.pagesError}
+                  <strong>Error</strong> {stats.pagesError}
                 </div>
               </div>
             </div>
@@ -306,7 +320,7 @@ const CacheValidatorInstance = ({
               <div className="bg-slate-400 p-2 font-bold dark:bg-slate-600 sm:px-4">
                 Images
               </div>
-              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4">
+              <div className="flex gap-4 px-2 max-md:flex-col max-md:gap-1 sm:px-4 md:justify-center">
                 <div>
                   <strong>Found</strong> {stats.imagesFound}
                 </div>
@@ -315,16 +329,16 @@ const CacheValidatorInstance = ({
                 </div>
                 <div />
                 <div>
-                  <strong>HIT</strong> {stats.imagesHit}
+                  <strong>Cached</strong> {stats.imagesCached}
                 </div>
                 <div>
-                  <strong>MISS</strong> {stats.imagesMiss}
+                  <strong>Uncached</strong> {stats.imagesUncached}
                 </div>
                 <div>
-                  <strong>STALE</strong> {stats.imagesStale}
+                  <strong>Other</strong> {stats.imagesOther}
                 </div>
                 <div>
-                  <strong>ERROR</strong> {stats.imagesError}
+                  <strong>Error</strong> {stats.imagesError}
                 </div>
               </div>
             </div>
@@ -356,7 +370,7 @@ const CacheValidatorInstance = ({
         {filteredResponses.map((response, index) => (
           <div
             key={index}
-            className={`grid w-full grid-cols-[20px_40px_40px_30px_calc(100%_-_130px)] ${response.level === "INFO" ? "text-sky-600 dark:text-sky-400" : ""} ${response.level === "SUCCESS" ? "text-emerald-600 dark:text-emerald-400" : ""} ${response.level === "WARNING" ? "text-amber-600 dark:text-amber-400" : ""} ${response.level === "ERROR" ? "text-red-600 dark:text-red-400" : ""}`}
+            className={`grid w-full grid-cols-[20px_40px_70px_30px_calc(100%_-_160px)] ${response.level === "INFO" ? "text-sky-600 dark:text-sky-400" : ""} ${response.level === "SUCCESS" ? "text-emerald-600 dark:text-emerald-400" : ""} ${response.level === "WARNING" ? "text-amber-600 dark:text-amber-400" : ""} ${response.level === "ERROR" ? "text-red-600 dark:text-red-400" : ""}`}
           >
             <div>
               {response.head?.status === "PENDING" ? (
@@ -373,7 +387,7 @@ const CacheValidatorInstance = ({
             {response.type === "head" && (
               <>
                 <div>{response.head?.type}</div>
-                <div>{response.head?.cache}</div>
+                <div>{response.head?.cacheResult}</div>
                 <div>
                   {response.head?.responseStatus &&
                     response.head?.responseStatus}
@@ -381,16 +395,24 @@ const CacheValidatorInstance = ({
                 <div className="break-words">
                   {response.head?.contentType && (
                     <span className="mr-1 h-4 text-nowrap rounded bg-slate-300 px-1 text-[0.65rem] dark:bg-slate-500">
-                      {response.head?.contentTypeMismatch && (
+                      {response.head?.contentType.split(";")[0] !==
+                        response.head?.acceptHeader && (
                         <span className="mr-1 line-through decoration-red-500/80">
                           {response.head?.acceptHeader}
                         </span>
                       )}
-                      {response.head?.contentType}
+                      {response.head?.contentType.split(";")[0]}
                     </span>
                   )}
                   {/* <span className="inline break-words"> */}
                   {response.head?.url}
+                  {response.message
+                    ? response.message.split("\n").map((message, i) => (
+                        <div key={i} className="ml-2 border-l border-current">
+                          ▶︎&nbsp;{message}
+                        </div>
+                      ))
+                    : ""}
                   {/* </span> */}
                 </div>
               </>
